@@ -199,7 +199,6 @@ function! omni#cpp#items#ResolveItemsTypeInfo(contextStack, items)
             " Note: a variable can be : MyNs::MyClass::_var or _var or (*pVar)
             " or _var[0][0]
             let szSymbol = s:GetSymbol(curItem.tokens)
-			call omni#common#debug#Trace('szSymbol', szSymbol)
 
             " If we have MyNamespace::myVar
             " We add MyNamespace in the context stack set szSymbol to myVar
