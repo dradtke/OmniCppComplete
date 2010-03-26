@@ -188,6 +188,7 @@ function! omni#cpp#items#ResolveItemsTypeInfo(contextStack, items)
     " It the kind is a C cast or C++ cast, there is no problem, it's the
     " easiest case. We just extract the type of the cast.
 
+	let s:localContext = ''
     let szCurrentContext = ''
     let typeInfo = {}
     " Note: We search the decl only for the first item
@@ -198,11 +199,13 @@ function! omni#cpp#items#ResolveItemsTypeInfo(contextStack, items)
             " Note: a variable can be : MyNs::MyClass::_var or _var or (*pVar)
             " or _var[0][0]
             let szSymbol = s:GetSymbol(curItem.tokens)
+			call omni#common#debug#Trace('szSymbol', szSymbol)
 
             " If we have MyNamespace::myVar
             " We add MyNamespace in the context stack set szSymbol to myVar
             if match(szSymbol, '::\w\+$') >= 0
-                let szCurrentContext = substitute(szSymbol, '::\w\+$', '', 'g')
+				let s:localContext = substitute(szSymbol, '::\w\+$', '', 'g')
+                let szCurrentContext = s:localContext
                 let szSymbol = matchstr(szSymbol, '\w\+$')
             endif
             let tmpContextStack = a:contextStack
@@ -235,6 +238,10 @@ function! omni#cpp#items#ResolveItemsTypeInfo(contextStack, items)
     endfor
 
     return typeInfo
+endfunc
+
+function! omni#cpp#items#GetLocalContext()
+	return s:localContext
 endfunc
 
 " Get symbol name
@@ -477,7 +484,6 @@ function! s:SearchDecl(szVariable)
         " instruction (if, elseif, while etc...)
         " We have to check if the detected decl is really a decl instruction
         let tokens = omni#cpp#utils#TokenizeCurrentInstruction()
-
         for token in tokens
             " Simple test
             if index(['if', 'elseif', 'while', 'for', 'switch'], token.value)>=0
@@ -493,6 +499,7 @@ function! s:SearchDecl(szVariable)
         endif
     endif
     call setpos('.', originalPos)
+	"return {}
     return result
 endfunc
 
@@ -581,7 +588,6 @@ endfunc
 " Otherwise it should be equal to 'searchdecl(name, 0, 1)'
 " @param name: name of variable to find declaration for
 function! s:LocalSearchDecl(name)
-
     if g:OmniCpp_LocalSearchDecl == 0
         let bUserIgnoreCase = &ignorecase
 
@@ -604,7 +610,7 @@ function! s:LocalSearchDecl(name)
 
     " We add \C (noignorecase) to 
     " avoid bug when, for example, if we have a declaration like this : "A a;"
-    let varname = "\\C\\<" . a:name . "\\>"
+    let varname = '\C\<' . a:name . '\>'
 
     " Go to first blank line before begin of highest scope
     normal 99[{
@@ -619,6 +625,11 @@ function! s:LocalSearchDecl(name)
         if omni#cpp#utils#IsCursorInCommentOrString()
             continue
         endif
+
+		" Make sure it at least kind of looks like a declaration
+		if getline('.') !~ (a:name . '\s\{-}[;|=]')
+			continue
+		endif
 
         " Remember match
         let declpos = getpos('.')
@@ -645,6 +656,11 @@ function! s:LocalSearchDecl(name)
         if omni#cpp#utils#IsCursorInCommentOrString()
           continue
         endif
+
+		" Make sure it at least kind of looks like a declaration
+		if getline('.') !~ (a:name . '\s\{-}[;|=]')
+			continue
+		endif
 
         " We found match
         call winrestview(winview)

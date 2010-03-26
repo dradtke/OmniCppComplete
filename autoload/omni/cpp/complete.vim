@@ -445,7 +445,7 @@ endfunc
 " This function is used for the 'omnifunc' option.
 function! omni#cpp#complete#Main(findstart, base)
     if a:findstart
-        "call omni#common#debug#Start()
+        call omni#common#debug#Start()
 
         call s:InitComplete()
 
@@ -513,6 +513,11 @@ function! omni#cpp#complete#Main(findstart, base)
         endif
     else
         let typeInfo = omni#cpp#items#ResolveItemsTypeInfo(s:contextStack, g:omni#cpp#items#data)
+		
+		let localContext = omni#cpp#items#GetLocalContext()
+		if localContext != ''
+			let s:contextStack = [ '::' . localContext ] + s:contextStack
+		endif
 
         if typeInfo != {}
             if g:omni#cpp#items#data[-1].kind == 'itemScope'
@@ -550,8 +555,12 @@ function! omni#cpp#complete#Main(findstart, base)
                 endif
             else
                 " C) CLASS_MEMBERS_COMPLETION_MODE
+				call omni#common#debug#Trace("Type Info", typeInfo)
+				call omni#common#debug#Trace("Context stack", s:contextStack)
                 for resolvedTagItem in omni#cpp#utils#GetResolvedTags(s:contextStack, typeInfo)
+					call omni#common#debug#Trace("Resolved Tag Item", resolvedTagItem)
                     let szTypeInfo = omni#cpp#utils#ExtractTypeInfoFromTag(resolvedTagItem)
+					call omni#common#debug#Trace('szTypeInfo', szTypeInfo)
                     if index(s:contextStack, szTypeInfo)<0
                         let szAccessFilter = 'public'
                     else
@@ -563,7 +572,7 @@ function! omni#cpp#complete#Main(findstart, base)
         endif
     endif
 
-    "call omni#common#debug#End()
+    call omni#common#debug#End()
 
     return s:popupItemResultList
 endfunc
